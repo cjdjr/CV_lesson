@@ -9,7 +9,7 @@
 
 using namespace cv;
 using namespace std;
-const double THRESHOLD=exp(-5);
+const double THRESHOLD=-10;
 
 void Add_Gaussian_noise(const Mat &img,Mat &ans,double sigma)
 {
@@ -110,8 +110,19 @@ void NL_Means(const Mat &img,Mat &ans,int Dp,int Ds,double h)
         }
     return;
 }
-
-
+vector<double> E;
+void myexp_init(int n)
+{
+    E.resize(1000*n);
+    for(int i=0;i<E.size();++i) E[i]=exp(-0.001*i);
+}
+double myexp(double x)
+{
+    int n=floor(x*1000);
+    if(n+1>=E.size()) return 0;
+    double y1=E[n],y2=E[n+1];
+    return y1+(y2-y1)*(1000*x-n);
+}
 
 void fastNL_Means(const Mat &origin_img,Mat &ans,int Dp,int Ds,double h)
 {
@@ -137,6 +148,8 @@ void fastNL_Means(const Mat &origin_img,Mat &ans,int Dp,int Ds,double h)
         for(int j=0;j<imgsize.width;++j) s[i][j]=mx[i][j]=b[i][j]=g[i][j]=r[i][j]=0.0;
     }
     //cout<<clock()<<endl;
+    myexp_init(-int(THRESHOLD));
+
     for(int p=-Ds;p<=Ds;p+=1)
         for(int q=-Ds;q<=Ds;q+=1)
         {
@@ -156,10 +169,12 @@ void fastNL_Means(const Mat &origin_img,Mat &ans,int Dp,int Ds,double h)
                     if(i+p>=0&&i+p<imgsize.height&&j+q>=0&&j+q<imgsize.width)
                     {
                         double dis=presum[i+Dp+Dp+1][j+Dp+Dp+1]-presum[i-Dp-1+Dp+1][j+Dp+Dp+1]-presum[i+Dp+Dp+1][j-Dp-1+Dp+1]+presum[i-Dp-1+Dp+1][j-Dp-1+Dp+1];
-                        dis=dis/(3*sqr(2*Dp+1));
+                        dis=dis/(3*sqr(2*Dp+1)*h*h);
+                        dis=myexp(dis);
+                        //cout<<"debug : "<<dis/(h*h)<<endl;
                         //dis=exp(-dis/(h*h));
                         //dis=-dis/(h*h);
-                        if(dis<=THRESHOLD) dis=0;
+                        //if(dis<=THRESHOLD) dis=0;
                         s[i][j]+=dis;
                         mx[i][j]=max(mx[i][j],dis);
                         b[i][j]+=dis*origin_img.at<Vec3b>(i+p,j+q)[0];
@@ -168,6 +183,7 @@ void fastNL_Means(const Mat &origin_img,Mat &ans,int Dp,int Ds,double h)
                     }
         }
     ans=origin_img.clone();
+    double mxx=0;
     for(int i=0;i<imgsize.height;++i)
         for(int j=0;j<imgsize.width;++j)
         {
@@ -182,7 +198,9 @@ void fastNL_Means(const Mat &origin_img,Mat &ans,int Dp,int Ds,double h)
                 ans.at<Vec3b>(i,j)[1]=int(g[i][j]);
                 ans.at<Vec3b>(i,j)[2]=int(r[i][j]);
             }
+            mxx=max(mxx,mx[i][j]);
         }
+    //cout<<"max="<<mxx<<endl;
 }
 int main(int argc, char *argv[])
 {
