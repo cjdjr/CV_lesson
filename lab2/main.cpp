@@ -9,7 +9,6 @@
 
 using namespace cv;
 using namespace std;
-const double THRESHOLD=-10;
 
 void Add_Gaussian_noise(const Mat &img,Mat &ans,double sigma)
 {
@@ -67,9 +66,7 @@ void NL_Means(const Mat &img,Mat &ans,int Dp,int Ds,double h)
     for(int i=0;i<imgsize.height;++i)
         for(int j=0;j<imgsize.width;++j)
         {
-            //if(i%10==0&&j%10==0) cout<<i<<" "<<j<<endl;
             Mat centre=padding(img,i,j,Dp);
-            //if(i==30&&j==30) cout<<centre<<endl;
             double b=0,g=0,r=0;
             double s=0;
             double mx=0;
@@ -78,15 +75,8 @@ void NL_Means(const Mat &img,Mat &ans,int Dp,int Ds,double h)
                 {
                     if(p==i&&q==j) continue;
                     Mat tmp=padding(img,p,q,Dp);
-                    //if(i==30&&j==30&&p+1==i&&q+1==j) cout<<"debug "<<-cal2dis(centre,tmp)<<endl;
-                    //cout<<tmp<<endl;
                     double num=-cal2dis(centre,tmp)/(h*h);
-                    //if(i==0&&j==5) cout<<"debug : "<<num<<endl;
                     double dis=exp(num);
-                    //if(i==10&&j==10) cout<<"debug : "<<num<<endl;
-                  //  if(num<=-5) dis=0;//      // ±£³Ö±ßÔµ
-
-                    //cout<<"("<<i<<","<<j<<")="<<dis<<endl;
                     s+=dis;
                     mx=max(mx,dis);
                     b+=dis*img.at<Vec3b>(p,q)[0];
@@ -99,14 +89,11 @@ void NL_Means(const Mat &img,Mat &ans,int Dp,int Ds,double h)
             s+=mx;
             if(s>0)
             {
-                //cout<<"("<<i<<","<<j<<")="<<s<<endl;
                 b/=s,g/=s,r/=s;
                 ans.at<Vec3b>(i,j)[0]=int(b);
                 ans.at<Vec3b>(i,j)[1]=int(g);
                 ans.at<Vec3b>(i,j)[2]=int(r);
-                //cout<<"("<<i<<","<<j<<")="<<b<<","<<g<<","<<r<<endl;
             }
-            //if(i==30&&j==30) cout<<"debug"<<s<<endl;
         }
     return;
 }
@@ -126,6 +113,8 @@ double myexp(double x)
 
 void fastNL_Means(const Mat &origin_img,Mat &ans,int Dp,int Ds,double h)
 {
+    const double THRESHOLD=-5;
+
     Mat img=Mat::zeros(Size(origin_img.rows+2*Dp, origin_img.cols+2*Dp), CV_8UC3);
     copyMakeBorder(origin_img,img,Dp,Dp,Dp,Dp,BORDER_REFLECT_101);
     Size imgsize=origin_img.size();
@@ -147,13 +136,11 @@ void fastNL_Means(const Mat &origin_img,Mat &ans,int Dp,int Ds,double h)
         mx[i].resize(imgsize.width);
         for(int j=0;j<imgsize.width;++j) s[i][j]=mx[i][j]=b[i][j]=g[i][j]=r[i][j]=0.0;
     }
-    //cout<<clock()<<endl;
     myexp_init(-int(THRESHOLD));
 
     for(int p=-Ds;p<=Ds;p+=1)
         for(int q=-Ds;q<=Ds;q+=1)
         {
-            //cout<<p<<" "<<q<<endl;
             if(p==0&&q==0) continue;
             for(int i=0;i<=img.rows;++i)
                 for(int j=0;j<=img.cols;++j)
@@ -171,10 +158,6 @@ void fastNL_Means(const Mat &origin_img,Mat &ans,int Dp,int Ds,double h)
                         double dis=presum[i+Dp+Dp+1][j+Dp+Dp+1]-presum[i-Dp-1+Dp+1][j+Dp+Dp+1]-presum[i+Dp+Dp+1][j-Dp-1+Dp+1]+presum[i-Dp-1+Dp+1][j-Dp-1+Dp+1];
                         dis=dis/(3*sqr(2*Dp+1)*h*h);
                         dis=myexp(dis);
-                        //cout<<"debug : "<<dis/(h*h)<<endl;
-                        //dis=exp(-dis/(h*h));
-                        //dis=-dis/(h*h);
-                        //if(dis<=THRESHOLD) dis=0;
                         s[i][j]+=dis;
                         mx[i][j]=max(mx[i][j],dis);
                         b[i][j]+=dis*origin_img.at<Vec3b>(i+p,j+q)[0];
@@ -200,7 +183,6 @@ void fastNL_Means(const Mat &origin_img,Mat &ans,int Dp,int Ds,double h)
             }
             mxx=max(mxx,mx[i][j]);
         }
-    //cout<<"max="<<mxx<<endl;
 }
 int main(int argc, char *argv[])
 {
@@ -210,15 +192,15 @@ int main(int argc, char *argv[])
        return -1;
     imshow("img",img);
     Mat noise_img;
-    Add_Gaussian_noise(img,noise_img,5);
+    Add_Gaussian_noise(img,noise_img,10);
     imshow("noise_img",noise_img);
     Mat denoise_img;
-
     //NL_Means(noise_img,denoise_img,1,10,10);
-    fastNL_Means(noise_img,denoise_img,1,10,10);
+    fastNL_Means(noise_img,denoise_img,1,20,10);
     //cv::fastNlMeansDenoisingColored(noise_img,denoise_img,6,3,3,10);
     cout<<clock()<<endl;
     imshow("denoise_img",denoise_img);
+    //imwrite("denoise_img20.jpg",denoise_img);
 
     waitKey(0);
 
