@@ -10,6 +10,6 @@
 
 # 实验效果
 
-![007](.\pictures\007.png)
+![007](./pictures/007.png)
 
-![Godfather](D:\wmr\计算机视觉\CV_lesson\lab1\pictures\Godfather.png)
+![Godfather](./pictures/Godfather.png)
