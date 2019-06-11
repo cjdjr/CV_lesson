@@ -29,6 +29,7 @@ private:
     int height=100,width=100;
     PCA pca;
 
+    Mat sigma;
     vector<Mat> templates;
     double calDifference(const Mat &img,int);
     Mat createDataMatrix();
@@ -84,6 +85,29 @@ void EigenFeature::align_templ_size(int x,int y)
 {
     height=x,width=y;
     for(auto &x:templates) resize(x,x,Size(width,height));
+
+    sigma=Mat(height,width,CV_32F);
+    double S=0;
+    for(int i=0;i<x;++i)
+        for(int j=0;j<y;++j)
+        {
+            double mean=0;
+            for(auto x:templates) mean+=x.at<uchar>(i,j);
+            mean/=templates.size();
+            double sum=0;
+            for(auto x:templates) sum+=sqr(mean-x.at<uchar>(i,j));
+            sum/=templates.size();
+            sum=sqrt(sum);
+
+            sum=1.0/sum;
+            sigma.at<float>(i,j)=sum;
+            //cout<<i<<" "<<j<<" "<<sum<<endl;
+            S+=sum;
+        }
+    for(int i=0;i<x;++i)
+        for(int j=0;j<y;++j)
+            sigma.at<float>(i,j)/=S;
+    sigma=sigma.reshape(1,1);
 }
 
 Mat EigenFeature::createDataMatrix()
@@ -196,9 +220,10 @@ double EigenFeature::calDifference(const Mat &img,int is_show)
     //cout<<output<<endl;
     double ans=0;
     for(int i=0;i<img.rows*img.cols;++i)
-        ans+=sqr(output.at<float>(0,i)-img1.at<uchar>(0,i));
-    ans/=img.cols*img.rows;
-    ans=sqrt(ans);
+        ans+=sigma.at<float>(0,i)*abs(output.at<float>(0,i)-img1.at<uchar>(0,i));
+        //ans+=abs(output.at<float>(0,i)-img1.at<uchar>(0,i));
+    ans=(ans);
+    //cout<<ans<<endl;
     if(is_show==1) cout<<"value="<<ans<<endl;
     return ans;
     //cout<<"wmr"<<endl;
@@ -226,10 +251,12 @@ double EigenFeature::match(const Mat &img,int is_show)
     Mat output=pca.backProject(tmp).reshape(1,templates[0].rows);
     normalize(output, output, 0, 255, NORM_MINMAX, CV_8UC1);
     imshow("haha",output);*/
-    if(height>img.rows||width>img.cols) return 1000000;
+    cout<<height<<" "<<img.rows<<" "<<width<<" "<<img.cols<<endl;
+    if(height>img.rows||width>img.cols) return 1000000000000;
+
     int ansx=-1,ansy=-1;
     Mat value=Mat::zeros(img.rows,img.cols,CV_32F);
-    double mi=1000000;
+    double mi=1000000000000;
     for(int i=0;i+height<=img.rows;++i)
         for(int j=0;j+width<=img.cols;++j)
         {
