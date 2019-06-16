@@ -1,0 +1,1 @@
+利用PCA特征提取做了一个简单的Facial Landmark Dection.具体实验结果和分析见实验报告。
